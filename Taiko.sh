@@ -76,8 +76,8 @@ if [ ! -f .env ]; then
 fi
 
 # 提示用户输入环境变量的值
-l1_endpoint_http=http://84.247.155.79:8545
-l1_endpoint_ws=ws://84.247.155.79:8546
+l1_endpoint_http=https://holesky.glacierluo.io/
+l1_endpoint_ws=wss://holesky.glacierluo.io
 enable_proposer=true
 l1_beacon_http=https://ethereum-holesky-beacon-api.publicnode.com
 disable_p2p_sync=false
