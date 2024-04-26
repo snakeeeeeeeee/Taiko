@@ -36,6 +36,15 @@ function check_and_set_alias() {
     fi
 }
 
+function remove_old_node() {
+    echo "正在删除旧节点..."
+    cd simple-taiko-node
+    docker compose down -v
+    cd $HOME
+    rm -rf simple-taiko-node
+    echo "旧节点已删除。"
+}
+
 # 节点安装功能
 function install_node() {
 
@@ -65,61 +74,46 @@ if [ ! -f .env ]; then
 fi
 
 # 提示用户输入环境变量的值
-read -p "请输入BlockPI holesky HTTP链接: " l1_endpoint_http
-read -p "请输入BlockPI holesky WS链接: " l1_endpoint_ws
-read -p "请输入Beacon Holskey RPC（如果你没有搭建的话，请输入:https://ethereum-holesky-beacon-api.publicnode.com即可）链接: " l1_beacon_http
-read -p "请输入Prover RPC 链接(目前可用任意选一个:http://kenz-prover.hekla.kzvn.xyz:9876或者http://hekla.stonemac65.xyz:9876): " prover_endpoints
-read -p "请确认是否作为提议者（可选true或者false，目前prover 节点已经工作，请输入true，更新时间2024.4.26 15.30）: " enable_proposer
-read -p "请确认是否关闭P2P同步（可选true或者false，请选择false开启）: " disable_p2p_sync
-read -p "请输入EVM钱包私钥,不需要带0x: " l1_proposer_private_key
+l1_endpoint_http=http://84.247.155.79:8545
+l1_endpoint_ws=ws://84.247.155.79:8546
+enable_proposer=true
+l1_beacon_http=https://ethereum-holesky-beacon-api.publicnode.com
+disable_p2p_sync=false
+
+read -p "请输入EVM钱包私钥: " l1_proposer_private_key
 read -p "请输入EVM钱包地址: " l2_suggested_fee_recipient
 
-# 检测并罗列未被占用的端口
-function list_recommended_ports {
-    local start_port=8000 # 可以根据需要调整起始搜索端口
-    local needed_ports=7
-    local count=0
-    local ports=()
-
-    while [ "$count" -lt "$needed_ports" ]; do
-        if ! ss -tuln | grep -q ":$start_port " ; then
-            ports+=($start_port)
-            ((count++))
-        fi
-        ((start_port++))
-    done
-
-    echo "推荐的端口如下："
-    for port in "${ports[@]}"; do
-        echo -e "\033[0;32m$port\033[0m"
-    done
-}
+## 检测并罗列未被占用的端口
+#function list_recommended_ports {
+#    local start_port=8000 # 可以根据需要调整起始搜索端口
+#    local needed_ports=7
+#    local count=0
+#    local ports=()
+#
+#    while [ "$count" -lt "$needed_ports" ]; do
+#        if ! ss -tuln | grep -q ":$start_port " ; then
+#            ports+=($start_port)
+#            ((count++))
+#        fi
+#        ((start_port++))
+#    done
+#
+#    echo "推荐的端口如下："
+#    for port in "${ports[@]}"; do
+#        echo -e "\033[0;32m$port\033[0m"
+#    done
+#}
 
 # 使用推荐端口函数为端口配置
-list_recommended_ports
 
 # 提示用户输入端口配置，允许使用默认值
-read -p "请输入L2执行引擎HTTP端口 [默认: 8547]: " port_l2_execution_engine_http
-port_l2_execution_engine_http=${port_l2_execution_engine_http:-8547}
-
-read -p "请输入L2执行引擎WS端口 [默认: 8548]: " port_l2_execution_engine_ws
-port_l2_execution_engine_ws=${port_l2_execution_engine_ws:-8548}
-
-read -p "请输入L2执行引擎Metrics端口 [默认: 6060]: " port_l2_execution_engine_metrics
-port_l2_execution_engine_metrics=${port_l2_execution_engine_metrics:-6060}
-
-read -p "请输入L2执行引擎P2P端口 [默认: 30306]: " port_l2_execution_engine_p2p
-port_l2_execution_engine_p2p=${port_l2_execution_engine_p2p:-30306}
-
-read -p "请输入证明者服务器端口 [默认: 9876]: " port_prover_server
-port_prover_server=${port_prover_server:-9876}
-
-read -p "请输入Prometheus端口 [默认: 9091]: " port_prometheus
-port_prometheus=${port_prometheus:-9091}
-
-read -p "请输入Grafana端口 [默认: 3001]: " port_grafana
-port_grafana=${port_grafana:-3001}
-
+port_l2_execution_engine_http=10000
+port_l2_execution_engine_ws=10001
+port_l2_execution_engine_metrics=10002
+port_l2_execution_engine_p2p=10003
+port_prover_server=10004
+port_prometheus=10005
+port_grafana=10006
 # 将用户输入的值写入.env文件
 sed -i "s|L1_ENDPOINT_HTTP=.*|L1_ENDPOINT_HTTP=${l1_endpoint_http}|" .env
 sed -i "s|L1_ENDPOINT_WS=.*|L1_ENDPOINT_WS=${l1_endpoint_ws}|" .env
@@ -128,8 +122,6 @@ sed -i "s|ENABLE_PROPOSER=.*|ENABLE_PROPOSER=${enable_proposer}|" .env
 sed -i "s|L1_PROPOSER_PRIVATE_KEY=.*|L1_PROPOSER_PRIVATE_KEY=${l1_proposer_private_key}|" .env
 sed -i "s|L2_SUGGESTED_FEE_RECIPIENT=.*|L2_SUGGESTED_FEE_RECIPIENT=${l2_suggested_fee_recipient}|" .env
 sed -i "s|DISABLE_P2P_SYNC=.*|DISABLE_P2P_SYNC=${disable_p2p_sync}|" .env
-sed -i "s|PROVER_ENDPOINTS=.*|PROVER_ENDPOINTS=${prover_endpoints}|" .env
-
 
 # 更新.env文件中的端口配置
 sed -i "s|PORT_L2_EXECUTION_ENGINE_HTTP=.*|PORT_L2_EXECUTION_ENGINE_HTTP=${port_l2_execution_engine_http}|" .env
@@ -139,6 +131,7 @@ sed -i "s|PORT_L2_EXECUTION_ENGINE_P2P=.*|PORT_L2_EXECUTION_ENGINE_P2P=${port_l2
 sed -i "s|PORT_PROVER_SERVER=.*|PORT_PROVER_SERVER=${port_prover_server}|" .env
 sed -i "s|PORT_PROMETHEUS=.*|PORT_PROMETHEUS=${port_prometheus}|" .env
 sed -i "s|PORT_GRAFANA=.*|PORT_GRAFANA=${port_grafana}|" .env
+sed -i "s|PROVER_ENDPOINTS=.*|PROVER_ENDPOINTS=http://hekla.stonemac65.xyz:9876|" .env
 sed -i "s|BLOCK_PROPOSAL_FEE=.*|BLOCK_PROPOSAL_FEE=30|" .env
 
 # 用户信息已配置完毕
@@ -211,41 +204,10 @@ echo "请通过以下链接查询设备运行情况，如果无法访问，请�
 
 # 查看节点日志
 function check_service_status() {
-    cd #HOME
     cd simple-taiko-node
     docker compose logs -f --tail 20
 }
 
-# 更改常规配置
-function change_option() {
-cd #HOME
-cd simple-taiko-node
-
-# 将用户输入的值写入.env文件
-sed -i "s|L1_ENDPOINT_HTTP=.*|L1_ENDPOINT_HTTP=${l1_endpoint_http}|" .env
-sed -i "s|L1_ENDPOINT_WS=.*|L1_ENDPOINT_WS=${l1_endpoint_ws}|" .env
-sed -i "s|L1_BEACON_HTTP=.*|L1_BEACON_HTTP=${l1_beacon_http}|" .env
-sed -i "s|ENABLE_PROPOSER=.*|ENABLE_PROPOSER=${enable_proposer}|" .env
-sed -i "s|L1_PROPOSER_PRIVATE_KEY=.*|L1_PROPOSER_PRIVATE_KEY=${l1_proposer_private_key}|" .env
-sed -i "s|L2_SUGGESTED_FEE_RECIPIENT=.*|L2_SUGGESTED_FEE_RECIPIENT=${l2_suggested_fee_recipient}|" .env
-sed -i "s|DISABLE_P2P_SYNC=.*|DISABLE_P2P_SYNC=${disable_p2p_sync}|" .env
-sed -i "s|PROVER_ENDPOINTS=.*|PROVER_ENDPOINTS=${prover_endpoints}|" .env
-
-
-docker compose --profile l2_execution_engine down
-docker stop simple-taiko-node-taiko_client_proposer-1 && docker rm simple-taiko-node-taiko_client_proposer-1
-docker compose --profile l2_execution_engine --profile proposer up -d
-
-read -p "请输入BlockPI holesky HTTP链接: " l1_endpoint_http
-read -p "请输入BlockPI holesky WS链接: " l1_endpoint_ws
-read -p "请输入Beacon Holskey RPC（如果你没有搭建的话，请输入:https://ethereum-holesky-beacon-api.publicnode.com/即可）链接: " l1_beacon_http
-read -p "请输入Prover RPC 链接(目前可用任意选一个:http://kenz-prover.hekla.kzvn.xyz:9876或者http://hekla.stonemac65.xyz:9876): " prover_endpoints
-read -p "请确认是否作为提议者（可选true或者false，目前prover 节点已经工作，请输入true，更新时间2024.4.26 15.30）: " enable_proposer
-read -p "请确认是否关闭P2P同步（可选true或者false，请选择false开启）: " disable_p2p_sync
-read -p "请输入EVM钱包私钥: " l1_proposer_private_key
-read -p "请输入EVM钱包地址: " l2_suggested_fee_recipient
-
-}
 
 
 # 主菜单
@@ -260,14 +222,14 @@ function main_menu() {
     echo "1. 安装节点"
     echo "2. 查看节点日志"
     echo "3. 设置快捷键的功能"
-    echo "4. 更改常规配置"
+    echo "4. 删除老节点"
     read -p "请输入选项（1-3）: " OPTION
 
     case $OPTION in
     1) install_node ;;
     2) check_service_status ;;
-    3) check_and_set_alias ;; 
-    4) change_option ;; 
+    3) check_and_set_alias ;;
+    4) remove_old_node ;;
     *) echo "无效选项。" ;;
     esac
 }
