@@ -46,8 +46,8 @@ function remove_old_node() {
 }
 
 function restart_node() {
-    docker stop simple-taiko-node-taiko_client_proposer-1
-    && docker compose --profile l2_execution_engine down && docker rm simple-taiko-node-taiko_client_proposer-1 && docker compose --profile l2_execution_engine up -d && docker compose up taiko_client_proposer -d
+    cd $HOME/simple-taiko-node
+    docker stop simple-taiko-node-taiko_client_proposer-1 && docker compose --profile l2_execution_engine down && docker rm simple-taiko-node-taiko_client_proposer-1 && docker compose --profile l2_execution_engine up -d && docker compose up taiko_client_proposer -d
 }
 
 # 节点安装功能
