@@ -45,7 +45,10 @@ function remove_old_node() {
     echo "旧节点已删除。"
 }
 
-
+function restart_node() {
+    cd $HOME/simple-taiko-node
+    docker stop simple-taiko-node-taiko_client_proposer-1 && docker compose --profile l2_execution_engine down && docker rm simple-taiko-node-taiko_client_proposer-1 && docker compose --profile l2_execution_engine up -d && docker compose up taiko_client_proposer -d
+}
 
 # 节点安装功能
 function install_node() {
@@ -232,6 +235,7 @@ function main_menu() {
     2) check_service_status ;;
     3) check_and_set_alias ;;
     4) remove_old_node ;;
+    5) restart_node ;;
     *) echo "无效选项。" ;;
     esac
 }
